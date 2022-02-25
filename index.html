@@ -1,0 +1,115 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Planets</title>
+        <style>
+            body {
+                margin: 0;
+            }
+        </style>
+        <script src="../libs/pixi.js"></script>
+    </head>
+    <body>
+        <script src="Planets.js"></script>
+        <script>
+            document.body.appendChild(app.view)
+            app.renderer.resize(window.innerWidth, window.innerHeight)
+            window.addEventListener('resize', () => { app.renderer.resize(window.innerWidth, window.innerHeight) })
+            document.addEventListener('contextmenu', e => e.preventDefault())
+
+            const UA = 149597870700
+            const RaggioSole = 695700000
+
+            document.addEventListener('mouseup',   e => { MouseDown = false })
+            document.addEventListener('mousedown', e => { MouseDown = true; MouseDragX = e.clientX; MouseDragY = e.clientY })
+            document.addEventListener('mousemove', e => { MousePositionX = e.clientX; MousePositionY = e.clientY })
+            document.addEventListener('wheel',     e => { CameraManager.zoom(e.deltaY > 0 ? 0.80 : 1.25) })
+            document.addEventListener('keydown',   e => {
+                if('0' <= e.key && e.key <= '9')
+                    CameraManager.follow(parseInt(e.key))
+                else
+                    switch(e.key) {
+                        case 'c': CameraManager.pixelScale  = 300/UA
+                                  CameraManager.radiusScale = 300/UA; break
+                        case 'v': CameraManager.pixelScale  = 300/UA
+                                  CameraManager.radiusScale = 50/RaggioSole; break
+                        case 'z': BodyManager.remove(0); break
+                        case 'x': BodyManager.bodies[0].mass *= 2
+                                  CameraManager.pixelScale  = 300/UA
+                                  CameraManager.radiusScale = 300/UA
+                                  CameraManager.trailTimer = 1; break
+                        case 'm': CameraManager.trailTimer = 1;   break
+                        case 'n': CameraManager.trailTimer = 4;   break
+                        case 'q': CameraManager.trailNumber /= 2; break
+                        case 'w': CameraManager.trailNumber *= 2; break
+                        case 's': CameraManager.showTrails();     break
+                        case 'f': CameraManager.resetTrails();    break
+                        case 't': BodyManager.dt *= 2;            break
+                        case 'r': BodyManager.dt /= 2;            break
+                        case '+': CameraManager.zoom(1.25);       break
+                        case '-': CameraManager.zoom(0.80);       break
+                    }
+            })
+
+            help()
+            initialize()
+
+            function help() {
+                console.log("Shortcuts")
+                console.log("[0-9] | focus nth planet")
+                console.log("  C   | show real size scale")
+                console.log("  V   | show fake size scale")
+                console.log("  Z   | remove Sun")
+                console.log("  X   | double Sun mass (automatically changes size scale)")
+                console.log("  M   | max    trail precision")
+                console.log("  N   | normal trail precision")
+                console.log("  Q   | halve  trail number")
+                console.log("  W   | double trail number")
+                console.log("  S   | toggle trails")
+                console.log("  F   | reset trails")
+                console.log("  T   | double time step")
+                console.log("  R   | halve  time step")
+                console.log("  +   | zoom in")
+                console.log("  -   | zoom out")
+            }
+
+            function loadSolarSystemPlanets(BodyManager) {
+                function addPlanet(body) {
+                    return BodyManager.add(body.position, 0,
+                                           0, body.speed,
+                                           body.mass, body.radius, body.color, body.name)
+                }
+                [{id:1, name:"Sun",    mass:1.98855e+30,position:0,            speed:0,    radius:695700000,color:0xFDB813},
+                 {id:2, name:"Mercury",mass:3.3011e+23, position:57909176000,  speed:47362,radius:2439700,  color:0xFD1E1E},
+                 {id:3, name:"Venus",  mass:4.8675e+24, position:108208926000, speed:35020,radius:6051800,  color:0xFD9600},
+                 {id:4, name:"Earth",  mass:5.97237e+24,position:149597870700, speed:29783,radius:6371000,  color:0x0000A0},
+                 {id:5, name:"Moon",   mass:0,          position:149982270700, speed:30811,radius:1737000,  color:0xA2A8AE},
+                 {id:6, name:"Mars",   mass:6.4171e+23, position:227936637000, speed:24077,radius:3389500,  color:0xFF0000},
+                 {id:7, name:"Jupiter",mass:1.8986e+27, position:778412027000, speed:12446,radius:69911000, color:0xFFFFFF},
+                 {id:8, name:"Saturn", mass:5.6836e+26, position:1426725413000,speed:9639, radius:58232000, color:0xFDB813},
+                 {id:9, name:"Uranus", mass:8.681e+25,  position:2870972220000,speed:6490, radius:2536200,  color:0x0000B4},
+                 {id:10,name:"Neptune",mass:1.024e+26,  position:4498252900000,speed:5432, radius:2462200,  color:0x0000FF}]
+                    .forEach(addPlanet)
+            }
+
+            function initialize() {
+                const SecondsInDay = 86400
+
+                BodyManager   = new BodyManagerClass(SecondsInDay/10, AccelerationModuleNewton)
+                CameraManager = new CameraManagerClass(300/UA, 50/RaggioSole)
+
+                loadSolarSystemPlanets(BodyManager)
+
+                CameraManager.loadPlanets()
+
+                app.ticker.add(delta => {
+                    BodyManager.applyAccelerations()
+                    CameraManager.update(delta)
+                    if(MouseDown)
+                        CameraManager.relativeMove((MousePositionX - MouseDragX)/30,
+                                                  -(MousePositionY - MouseDragY)/30)
+                })
+            }
+        </script>
+    </body>
+</html>
